@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Parqueadero Arrecife</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Concepto: tablero de control de un sótano de parqueadero. Letrero azul, concreto y pintura amarilla. */
+:root {
+  --bg: #e9ece8; --surface: #f8f9f6; --ink: #15202b; --muted: #4e5a64; --line: #c6ccc7; --lane: #eff1ed; --lane2: #e3e7e2;
+  --sign: #0b4da2; --sign-ink: #ffffff; --paint: #f2c200; --paint-ink: #1b1c10;
+  --good: #1baf7a; --warn: #eda100; --crit: #d63333; --crit-soft: #fde8e6; --fix-soft: #dfeafa; --warn-soft: #fff1cc; --on-crit: #ffffff; --on-warn: #2b1e00;
+  --good-text: #0b7350; --crit-text: #b3261e; --notice: #fff4c2; --notice-line: #d6a800;
+  --s-plan: #2a78d6; --s-hoy: #eb6834;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #13171b; --surface: #1d2329; --ink: #eef1f2; --muted: #a9b3bb; --line: #3a434c; --lane: #20262c; --lane2: #181d22;
+    --sign: #1a5fbd; --sign-ink: #ffffff; --paint: #f2c200; --paint-ink: #1b1c10;
+    --good: #199e70; --warn: #c98500; --crit: #e5484d; --crit-soft: #47201f; --fix-soft: #1b3454; --warn-soft: #3d3010; --on-crit: #ffffff; --on-warn: #1f1500;
+    --good-text: #4fd3a4; --crit-text: #ff8d87; --notice: #3a3112; --notice-line: #8f7400;
+    --s-plan: #3987e5; --s-hoy: #d95926; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #13171b; --surface: #1d2329; --ink: #eef1f2; --muted: #a9b3bb; --line: #3a434c; --lane: #20262c; --lane2: #181d22;
+  --sign: #1a5fbd; --sign-ink: #ffffff; --paint: #f2c200; --paint-ink: #1b1c10;
+  --good: #199e70; --warn: #c98500; --crit: #e5484d; --crit-soft: #47201f; --fix-soft: #1b3454; --warn-soft: #3d3010; --on-crit: #ffffff; --on-warn: #1f1500;
+  --good-text: #4fd3a4; --crit-text: #ff8d87; --notice: #3a3112; --notice-line: #8f7400;
+  --s-plan: #3987e5; --s-hoy: #d95926; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1rem/1.45 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sign); }
+h1, h2, p, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--paint); outline-offset: 2px; }
+.wrap { width: 100%; max-width: 1240px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.top { background: var(--sign); color: var(--sign-ink); margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: calc(env(safe-area-inset-top, 0px) + .8rem); padding-bottom: .8rem; }
+.top .wrap { display: grid; gap: .2rem; justify-items: center; text-align: center; }
+h1 { font: 700 clamp(1.8rem, 4vw, 2.5rem)/1 var(--display); text-transform: uppercase; }
+.top p { font-size: .95rem; }
+
+main { display: grid; gap: .9rem; padding-block: .9rem 2rem; }
+.bar-top { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.bar-top > span { font-weight: 700; margin-right: .2rem; }
+.bar-top button { border: 1px solid var(--line); background: var(--surface); padding: .36rem .7rem; border-radius: 4px; font-weight: 600; font-size: .93rem; }
+.bar-top button.on { background: var(--sign); border-color: var(--sign); color: var(--sign-ink); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: .8rem; min-width: 0; }
+h2 { font: 700 1.35rem/1.1 var(--display); text-transform: uppercase; }
+.flow-h { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: center; justify-content: space-between; margin-bottom: .55rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .2rem .9rem; font-size: .86rem; color: var(--muted); }
+.legend > span { display: inline-flex; align-items: center; gap: .35rem; }
+.key { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; line-height: 1; }
+.key.c { background: var(--crit); color: var(--on-crit); } .key.f { background: var(--sign); color: var(--sign-ink); } .key.w { background: var(--warn); color: var(--on-warn); }
+.key.line { width: 18px; height: 3px; border-radius: 2px; }
+.playbar { display: flex; gap: .6rem; align-items: center; flex: 1 1 280px; max-width: 430px; }
+.playbar button { flex: none; border: 0; background: var(--paint); color: var(--paint-ink); padding: .38rem .85rem; border-radius: 4px; font-weight: 700; min-width: 112px; }
+.playbar input { flex: 1; min-width: 60px; accent-color: var(--sign); }
+.playbar output { flex: none; font: 700 1.2rem/1 var(--display); font-variant-numeric: tabular-nums; min-width: 3.6em; text-align: right; }
+.flow-scroll { overflow-x: auto; border-radius: 4px; }
+#flow { display: block; width: 100%; min-width: 960px; height: auto; }
+#flow text { font-family: var(--body); fill: var(--ink); }
+.lane-a { fill: var(--lane); } .lane-b { fill: var(--lane2); }
+.lane-h { fill: var(--sign); }
+#flow .lane-t { fill: var(--sign-ink); font: 700 15px var(--display); letter-spacing: .03em; text-transform: uppercase; }
+.res-band { fill: var(--surface); stroke: var(--line); }
+#flow .res-t { font: 700 15px var(--display); text-transform: uppercase; fill: var(--muted); }
+.edge { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.arrow { fill: var(--muted); }
+.e-off { opacity: .16; }
+.el { font-size: 12.5px; font-weight: 700; }
+#flow .el { fill: var(--muted); }
+.nd rect, .nd polygon, .nd circle.b { fill: var(--surface); stroke: var(--muted); stroke-width: 1.6; transition: fill .2s, stroke .2s; }
+.nd text { font-size: 13.5px; font-weight: 600; text-anchor: middle; }
+.nd.crit rect, .nd.crit polygon { fill: var(--crit-soft); stroke: var(--crit); stroke-width: 2.2; }
+.nd.fix rect, .nd.fix polygon { fill: var(--fix-soft); stroke: var(--sign); stroke-width: 2.2; }
+.nd.weak rect, .nd.weak polygon { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 2.2; }
+.nd.dim { opacity: .28; }
+.badge-c { fill: var(--crit); } .badge-f { fill: var(--sign); } .badge-w { fill: var(--warn); }
+#flow .badge-t { fill: #fff; font-size: 11px; font-weight: 700; text-anchor: middle; }
+.end rect { fill: var(--surface); stroke-width: 2.6; }
+.end.ok rect { stroke: var(--good); } .end.bad rect { stroke: var(--crit); } .end.sus rect { stroke: var(--muted); stroke-dasharray: 5 4; } .end.vis rect { stroke: var(--sign); }
+#flow .end .cnt { font: 700 32px var(--display); text-anchor: end; font-variant-numeric: tabular-nums; }
+#flow .end .lab { font-size: 13.5px; font-weight: 600; text-anchor: start; }
+.tok { fill: var(--paint); stroke: var(--ink); stroke-width: 1.2; }
+.hint { display: none; font-size: .82rem; color: var(--muted); margin-top: .3rem; }
+
+.ctrl { display: grid; gap: .65rem; margin-top: .7rem; }
+.sliders { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem 1.3rem; }
+.mix { font-size: .86rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.decs { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.dec { display: inline-flex; align-items: center; gap: .35rem; border: 1.5px solid var(--line); background: var(--bg); border-radius: 999px; padding: .26rem .58rem; font-weight: 600; font-size: .87rem; }
+.dec::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); }
+.dec[aria-pressed="true"] { background: var(--sign); border-color: var(--sign); color: var(--sign-ink); }
+.dec[aria-pressed="true"]::before { background: var(--paint); border-color: var(--paint); }
+.dec.ev[aria-pressed="true"] { background: var(--crit); border-color: var(--crit); color: var(--on-crit); }
+.dec-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, auto); gap: .6rem 1.4rem; }
+.sl input:disabled { opacity: .55; }
+.sl { display: grid; margin-top: .3rem; }
+.sl label { display: flex; justify-content: space-between; gap: .5rem; font-size: .9rem; font-weight: 600; }
+.sl output { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sl input { width: 100%; accent-color: var(--sign); margin: 0; }
+details { font-size: .9rem; margin-top: .35rem; }
+summary { cursor: pointer; font-weight: 600; }
+
+.alert { display: flex; gap: .55rem; align-items: baseline; font-weight: 600; }
+.alert b { flex: none; font: 700 1.1rem/1 var(--display); text-transform: uppercase; color: var(--crit-text); }
+.alert.okay b { color: var(--good-text); }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.kpi { background: var(--surface); padding: .55rem .7rem; min-width: 0; }
+.kpi span { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); line-height: 1.15; min-height: 2.3em; }
+.kpi b { display: block; font: 700 clamp(1.5rem, 2.5vw, 2rem)/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.kpi em { display: block; font-style: normal; font-size: .78rem; font-weight: 600; line-height: 1.2; color: var(--muted); }
+.kpi em.up { color: var(--good-text); } .kpi em.down { color: var(--crit-text); }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: .9rem; }
+.viz-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; align-items: baseline; margin-bottom: .45rem; }
+.chart-box { position: relative; width: 100%; min-width: 0; }
+.chart-box svg { display: block; width: 100%; height: 230px; touch-action: pan-y; }
+.chart-box text { fill: var(--muted); font: 500 12px var(--body); font-variant-numeric: tabular-nums; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 4px; padding: .35rem .55rem; font-size: .82rem; line-height: 1.3; white-space: nowrap; z-index: 3; font-variant-numeric: tabular-nums; }
+.bars { display: grid; gap: .32rem; }
+.bar { display: grid; grid-template-columns: 158px minmax(0, 1fr) 82px; gap: .5rem; align-items: center; font-size: .89rem; font-weight: 500; line-height: 1.1; padding-block: 2px; }
+.bar i { display: block; height: 12px; background: var(--s-plan); border-radius: 0 4px 4px 0; min-width: 2px; transition: width .25s; }
+.bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.bar-track { border-left: 1px solid var(--muted); }
+.t-wrap { overflow-x: auto; margin-top: .4rem; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: .85rem; }
+th, td { border-bottom: 1px solid var(--line); padding: .2rem .5rem; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.assume { display: grid; gap: .2rem; margin: .4rem 0 0 1.1rem; list-style: disc; color: var(--muted); }
+
+@media (max-width: 1040px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .two, .dec-row { grid-template-columns: minmax(0, 1fr); } .sliders { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .hint { display: block; } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bar { grid-template-columns: 112px minmax(0, 1fr) 74px; font-size: .84rem; } .playbar { max-width: none; } .alert { display: block; } }
+@media (max-width: 520px) { .sliders { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { *, *::after { transition: none !important; } }
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<header class="top"><div class="wrap">
+  <h1>Laboratorio Parqueadero Arrecife</h1>
+  <p>Toma decisiones y mira cómo cambia el proceso en 12 meses.</p>
+</div></header>
+
+<main class="wrap">
+  <div class="bar-top" id="presets" role="group" aria-label="Escenarios"></div>
+
+  <section class="panel" aria-label="Diagrama de flujo del proceso">
+    <div class="flow-h">
+      <h2>Diagrama de flujo</h2>
+      <div class="legend"><span><span class="key c">!</span>Punto crítico</span><span><span class="key f">✓</span>Mejorado</span><span><span class="key w">~</span>Instalado, casi no se usa</span></div>
+      <div class="playbar">
+        <button id="play">▶ Simular</button>
+        <input id="month" type="range" min="1" max="12" step="1" value="12" aria-label="Mes de la simulación">
+        <output id="monthOut" for="month">Mes 12</output>
+      </div>
+    </div>
+    <div class="flow-scroll"><svg id="flow" viewBox="0 0 1140 650" role="img" aria-label="Diagrama de flujo del parqueadero, desde pedir el cupo hasta el resultado de cada mes"></svg></div>
+    <p class="hint">Desliza el diagrama para verlo completo.</p>
+    <div class="ctrl">
+      <div class="dec-row"><div><h2>Tus decisiones</h2><div class="decs" id="decs"></div></div><div><h2>Probar fallas</h2><div class="decs" id="evs"></div></div></div>
+      <div class="sliders" id="sliders"></div>
+      <p class="mix" id="mix"></p>
+    </div>
+  </section>
+
+  <p class="panel alert" id="alert" aria-live="polite"></p>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="two">
+    <section class="panel">
+      <div class="viz-h"><h2>Deuda acumulada</h2><div class="legend" id="chartLegend"></div></div>
+      <div class="chart-box" id="chart"></div>
+      <details><summary>Ver en tabla</summary><div class="t-wrap" id="chartTable"></div></details>
+    </section>
+    <section class="panel">
+      <div class="viz-h"><h2>Qué decisión pesa más</h2><span class="legend">Aporte al balance del año</span></div>
+      <div class="bars" id="bars"></div>
+      <details><summary>Supuestos del modelo</summary>
+        <ul class="assume">
+          <li>Datos del caso: 100 oficinas de 10 empleados, de 0 a 100 visitantes al mes, mensualidad de bicicleta $35.000, moto $120.000 y auto $150.000, día de visitante $20.000.</li>
+          <li>Valores supuestos: 700 personas usan el parqueadero, 20 % bicicleta, 30 % moto y 50 % auto, tarifa de $4.000 por hora.</li>
+          <li>De cada 100 visitantes, 60 se quedan 1 hora, 25 se quedan 3 y 15 todo el día. Con tarifa por hora llegan 20 % más.</li>
+          <li>La oficina atiende hasta 1.920 pagos al mes si está abierta todo el tiempo. Con persona fija está atendida 90 %.</li>
+          <li>Las fallas del correo y de la oficina ocurren en los meses 6 y 7.</li>
+          <li>Hasta 6 intentos al mes para encontrar la oficina abierta.</li>
+          <li>Cobrar es más difícil con el tiempo: 80 %, 60 %, 35 % y 15 % desde el cuarto mes.</li>
+          <li>Con capacitación el uso sube de 60 % a 92 %. Sin ella baja de 50 % a 8 %.</li>
+          <li>La persona del sótano ya está en nómina: $2.400.000 al mes. Dos máquinas de pago $1.000.000 al mes. Capacitación $600.000.</li>
+          <li>Trámite actual de cupo 6 días. Cada intento de pago en efectivo 15 minutos y en máquina 3.</li>
+        </ul>
+      </details>
+    </section>
+  </div>
+</main>
+
+<script>
+// Modelo didáctico del parqueadero: cadena de estados mes a mes (valores esperados, sin azar).
+const MESES = 12;
+const MESES_FALLA = [6, 7];
+const DECISIONES = ['digital', 'maquinas', 'reminders', 'suspend', 'qr', 'online', 'hourly', 'db', 'puesto', 'training'];
+const BASE = { total: 1000, n: 700, pBici: 0.2, pMoto: 0.3, feeBici: 35000, feeMoto: 120000, feeAuto: 150000,
+  office: 0.25, discipline: 0.85, platform: 1000000, salario: 2400000, costoMaquinas: 1000000,
+  visitantes: 50, tarifaDia: 20000, tarifaHora: 4000, masVisitas: 0.2,
+  caidaCorreo: false, colapsoOficina: false,
+  digital: false, maquinas: false, reminders: false, suspend: false, qr: false, online: false, hourly: false, db: false, puesto: false, training: false };
+const ESTADIAS = [[1, 0.6], [3, 0.25], [8, 0.15]];            // horas que se queda un visitante y qué parte de ellos
+const PAGOS_POR_MES = 1920;                                   // 20 días, 8 horas, 5 minutos por pago con la oficina atendida todo el tiempo
+const mensualidadPromedio = (c) => c.pBici * c.feeBici + c.pMoto * c.feeMoto + Math.max(0, 1 - c.pBici - c.pMoto) * c.feeAuto;
+const hayTec = (c) => c.digital || c.maquinas || c.reminders || c.suspend || c.qr || c.online || c.hourly || c.db;
+
+// Sin capacitación la gente deja de usar el sistema con los meses, como pasó con el software anterior.
+function adopcionMes(c, m) {
+  if (!hayTec(c)) return 0;
+  return c.training ? Math.min(0.92, 0.6 + 0.08 * (m - 1)) : Math.max(0.08, 0.5 - 0.09 * (m - 1));
+}
+
+function simular(cfg) {
+  const c = { ...BASE, ...cfg };
+  c.fee = mensualidadPromedio(c);
+  const hayTecnologia = hayTec(c);
+  const atencion = c.puesto ? Math.max(c.office, 0.9) : c.office;
+  const pagoPorHoras = ESTADIAS.reduce((t, [h, q]) => t + q * Math.min(c.tarifaDia, h * c.tarifaHora), 0);
+  const cobrable = (k) => [0, 0.8, 0.6, 0.35][k] ?? 0.15;         // entre más meses, más difícil cobrar
+
+  let activos = new Array(14).fill(0); activos[0] = 1;
+  let suspendidos = new Array(14).fill(0);
+  let facturado = 0, recaudado = 0, perdida = 0, adopcion = 0, usoDigital = 0, ingresoVisitas = 0, sobrecobro = 0;
+  let ultAlcance = 0, ultMaquina = 0, ultPresencial = 1, demandaOficina = 0, cupoOficina = 0;
+  const serie = [];
+
+  for (let m = 1; m <= MESES; m++) {
+    const falla = MESES_FALLA.includes(m);
+    const correoCaido = c.caidaCorreo && falla, oficinaCaida = c.colapsoOficina && falla;
+    adopcion = adopcionMes(c, m);
+    usoDigital = c.digital ? adopcion * (correoCaido ? 0.5 : 1) : 0;
+    const recordatorio = c.reminders && !correoCaido ? adopcion * (c.db ? 0.7 : 0.35) : 0;
+    const intencion = c.discipline + (1 - c.discipline) * recordatorio;
+    const totalActivos = activos.reduce((x, y) => x + y, 0);
+
+    const atencionMes = oficinaCaida ? 0.05 : atencion;
+    cupoOficina = atencionMes * PAGOS_POR_MES;
+    demandaOficina = c.n * totalActivos * intencion * (1 - usoDigital);
+    const porCupo = demandaOficina > 0 ? Math.min(1, cupoOficina / demandaOficina) : 1;
+    const alcance = Math.min(1 - Math.pow(1 - atencionMes, 6), porCupo);   // 6 intentos al mes y cupo limitado de la oficina
+    const alcanceMaquina = c.maquinas ? 0.55 + 0.4 * adopcion : 0;
+    const presencial = alcance + (1 - alcance) * alcanceMaquina;
+    const acceso = usoDigital * 0.98 + (1 - usoDigital) * presencial;
+    ultAlcance = alcance; ultMaquina = alcanceMaquina; ultPresencial = presencial;
+
+    const detBD = c.db ? 0.25 * adopcion : 0;
+    const detQR = c.qr ? (c.db ? 0.9 : 0.45) * adopcion : 0;
+    const detAuto = c.suspend && c.db ? 0.85 * adopcion : 0;
+    const deteccion = 1 - (1 - 0.04) * (1 - detBD) * (1 - detQR) * (1 - detAuto);
+    const suspension = c.suspend ? adopcion * (c.db ? 1 : 0.4) : 0;
+    const reasigna = c.online ? 0.2 + 0.5 * adopcion : (correoCaido ? 0 : 0.1);
+
+    const a = new Array(14).fill(0), s = new Array(14).fill(0);
+    let cobroMes = 0, fDirecto = 0, fCobrado = 0, fNoVisto = 0, fVistoSigue = 0, fSuspende = 0;
+    facturado += totalActivos;
+
+    for (let k = 0; k <= 12; k++) {
+      const masa = activos[k];
+      if (masa > 0) {
+        const paga = intencion * acceso * Math.pow(0.7, k);
+        a[0] += masa * paga; cobroMes += masa * paga * (k + 1); fDirecto += masa * paga;
+        const resto = masa * (1 - paga);
+        const detectado = resto * deteccion;
+        const cobrado = detectado * cobrable(k + 1) * (0.5 + 0.5 * acceso);
+        a[0] += cobrado; cobroMes += cobrado * (k + 1); fCobrado += cobrado;
+        const sinCobrar = detectado - cobrado;
+        fNoVisto += resto - detectado; fVistoSigue += sinCobrar * (1 - suspension); fSuspende += sinCobrar * suspension;
+        s[Math.min(k + 1, 13)] += sinCobrar * suspension;
+        a[Math.min(k + 1, 13)] += sinCobrar * (1 - suspension) + (resto - detectado);
+      }
+      const sus = suspendidos[k];
+      if (sus > 0) {
+        const vuelve = (k <= 2 ? 0.45 : 0.15) * acceso;
+        a[0] += sus * vuelve; cobroMes += sus * vuelve * k;
+        const queda = sus * (1 - vuelve);
+        const reasignado = queda * reasigna;
+        a[0] += reasignado; perdida += reasignado * k;
+        s[k] += queda - reasignado;
+      }
+    }
+    if (suspendidos[13] > 0) s[13] += suspendidos[13];
+    activos = a; suspendidos = s; recaudado += cobroMes;
+
+    const usoHora = c.hourly ? adopcion : 0;
+    const visitasMes = c.visitantes * (1 + c.masVisitas * usoHora);
+    const sobreMes = visitasMes * (1 - usoHora) * (c.tarifaDia - pagoPorHoras);
+    ingresoVisitas += visitasMes * (usoHora * pagoPorHoras + (1 - usoHora) * c.tarifaDia);
+    sobrecobro += sobreMes;
+
+    serie.push({ mes: m, alDia: a[0], debe12: a[1] + a[2],
+      debe3: a.slice(3).reduce((x, y) => x + y, 0), susp: s.reduce((x, y) => x + y, 0),
+      recaudoPct: recaudado / facturado, adopcion, visitantes: visitasMes, sobrecobro: sobreMes,
+      flujo: { directo: fDirecto, cobrado: fCobrado, noVisto: fNoVisto, vistoSigue: fVistoSigue, suspende: fSuspende,
+        oficina: intencion * acceso < 1 ? intencion * (1 - acceso) / (1 - intencion * acceso) : 0,
+        canalDigital: acceso > 0 ? usoDigital * 0.98 / acceso : 0,
+        canalMaquina: acceso > 0 ? (1 - usoDigital) * (1 - alcance) * alcanceMaquina / acceso : 0 },
+      cobroMes: cobroMes * c.n * c.fee, cartera: (facturado - recaudado) * c.n * c.fee });
+  }
+
+  const costoPlataforma = hayTecnologia ? c.platform * MESES + (c.training ? 600000 : 0) : 0;
+  const costoMaquinas = c.maquinas ? c.costoMaquinas * MESES : 0;
+  const costoOficina = c.salario * MESES;                        // la persona del sótano ya hace parte de la nómina
+  const facturadoCOP = facturado * c.n * c.fee;
+  const recaudadoCOP = recaudado * c.n * c.fee;
+  const f = serie[MESES - 1];
+  const minCobro = 5 * (1 - usoDigital) + 0.5 * usoDigital;
+  const minRegistro = c.db ? 3 * (1 - adopcion) + 0.5 * adopcion : 3;
+  const minVerifica = c.qr ? 2 * (1 - adopcion) + 0.3 * adopcion : 2;
+  const intentos = atencion >= 1 ? 1 : (1 - Math.pow(1 - atencion, 6)) / atencion;
+  const usoMaquina = ultPresencial > 0 ? (1 - ultAlcance) * ultMaquina / ultPresencial : 0;
+  const diasBase = c.online ? 6 * (1 - adopcion) + adopcion : 6;
+
+  return { cfg: c, serie, adopcion, atencion, facturadoCOP, recaudadoCOP, demandaOficina, cupoOficina,
+    recaudoPct: recaudadoCOP / facturadoCOP, carteraCOP: f.cartera, costoPlataforma, costoMaquinas, costoOficina,
+    ingresoVisitas, sobrecobroCOP: sobrecobro, pagoPorHoras,
+    netoCOP: recaudadoCOP + ingresoVisitas - costoPlataforma - costoMaquinas - costoOficina,
+    sinPagar: (f.debe12 + f.debe3) * c.n, debe3: f.debe3 * c.n, suspendidos: f.susp * c.n,
+    horasMes: c.n * (minCobro + minRegistro + minVerifica) / 60,
+    diasCupo: c.caidaCorreo && !c.online ? (10 * diasBase + 2 * (diasBase + 10)) / 12 : diasBase,
+    minPago: usoDigital * 2 + (1 - usoDigital) * (usoMaquina * 3 + (1 - usoMaquina) * 15 * intentos),
+    _control: { facturado, recaudado, perdida,
+      debeActivos: activos.reduce((x, y, k) => x + y * k, 0), debeSusp: suspendidos.reduce((x, y, k) => x + y * k, 0) } };
+}
+
+// Aporte promedio de cada decisión (valor de Shapley): reparte exactamente la mejora entre "todo apagado" y "todo encendido".
+function aportes(vars) {
+  const n = DECISIONES.length, memo = new Map();
+  const val = (mask) => {
+    if (!memo.has(mask)) {
+      const cfg = { ...vars };
+      DECISIONES.forEach((d, i) => { cfg[d] = !!(mask & (1 << i)); });
+      memo.set(mask, simular(cfg).netoCOP);
+    }
+    return memo.get(mask);
+  };
+  const fact = [1]; for (let i = 1; i <= n; i++) fact[i] = fact[i - 1] * i;
+  const res = {};
+  DECISIONES.forEach((d, i) => {
+    let t = 0;
+    for (let mask = 0; mask < (1 << n); mask++) {
+      if (mask & (1 << i)) continue;
+      let size = 0; for (let b = mask; b; b >>= 1) size += b & 1;
+      t += (fact[size] * fact[n - size - 1] / fact[n]) * (val(mask | (1 << i)) - val(mask));
+    }
+    res[d] = t;
+  });
+  return res;
+}
+
+if (typeof module !== 'undefined') module.exports = { simular, aportes, BASE, MESES, DECISIONES };
+
+</script>
+<script>
+const $ = (s) => document.querySelector(s);
+const DEC_T = { digital: 'Pago digital', maquinas: 'Máquinas de pago', reminders: 'Recordatorios', suspend: 'Suspensión automática', qr: 'Verificación con QR', online: 'Solicitud en línea', hourly: 'Tarifa por hora', db: 'Base de datos', puesto: 'Persona en su puesto', training: 'Capacitación' };
+const EV_T = { caidaCorreo: 'Se cae el correo', colapsoOficina: 'Colapsa la oficina' };
+const TODO = { digital: true, maquinas: true, reminders: true, suspend: true, qr: true, online: true, hourly: true, db: true };
+const ESCENARIOS = [['Hoy', {}, 0.25], ['Persona en su puesto', { puesto: true }, 0.25], ['Solo pago digital', { digital: true, training: true }, 0.25], ['Software sin capacitar', TODO, 0.25], ['Propuesta completa', { ...TODO, puesto: true, training: true }, 0.25]];
+const pctF = (v) => Math.round(v * 100) + ' %';
+const VARS = { office: ['Oficina atendida', 0.05, 1, 0.05, pctF], discipline: ['Pagan sin que les recuerden', 0.5, 1, 0.05, pctF], n: ['Usan el parqueadero', 100, 1000, 50, (v) => v.toLocaleString('es-CO') + ' de 1.000'], pBici: ['Usan bicicleta', 0, 1, 0.05, pctF], pMoto: ['Usan moto', 0, 1, 0.05, pctF], visitantes: ['Visitantes al mes', 0, 100, 5, (v) => v], tarifaHora: ['Tarifa por hora', 1000, 10000, 500, (v) => cop(v)], platform: ['Plataforma al mes', 0, 5000000, 100000, (v) => cop(v)] };
+const st = { ev: { caidaCorreo: false, colapsoOficina: false }, vars: { n: 700, pBici: 0.2, pMoto: 0.3, office: 0.25, discipline: 0.85, visitantes: 50, tarifaHora: 4000, platform: 1000000 }, dec: {}, mes: 12, playing: false, raf: 0, wait: 0, apKey: '', ap: null };
+DECISIONES.forEach((d) => { st.dec[d] = false; });
+const cop = (v) => '$' + Math.round(v).toLocaleString('es-CO');
+const mill = (v) => (v < 0 ? '−' : '') + '$' + (Math.abs(v) / 1e6).toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' M';
+const pct = (v, d = 1) => (v * 100).toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' %';
+const num = (v, d = 1) => v.toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d });
+const sg = (x, f) => (x > 0 ? '+' : x < 0 ? '−' : '') + f(Math.abs(x));
+let res, hoy;
+
+/* ---------- Diagrama de flujo ---------- */
+const TW = 130, TH = 56, GR = 34;
+const LANES = [['Empleado', 0, 130], ['Oficina de cobro', 130, 120], ['Punto digital', 250, 90], ['Jefe', 340, 90], ['Administración', 430, 130], ['Visitante', 560, 90]];
+const P = { s: [95, 65], t1: [225, 65], t2: [225, 385], t3: [225, 495], t4: [385, 495], t5: [385, 65], g1: [530, 65], t6: [675, 65], g2: [675, 190], t7: [820, 190], k1: [675, 295], g3: [530, 495], t8: [820, 495], v1: [225, 605], v2: [385, 605], v3: [675, 605] };
+const E = {
+  st1: [[111, 65], [160, 65]], t1t2: [[225, 93], [225, 357]], t2t3: [[225, 413], [225, 467]], t3t4: [[290, 495], [320, 495]],
+  t4t5: [[385, 467], [385, 93]], t5g1: [[450, 65], [496, 65]], g1t6: [[564, 65], [610, 65]], g1g3: [[530, 99], [530, 461]],
+  t6g2: [[675, 93], [675, 156]], t6t7: [[740, 65], [820, 65], [820, 162]], g2t7: [[709, 190], [755, 190]], g2g3: [[641, 190], [533, 190]],
+  g2k1: [[675, 224], [675, 267]], k1t7: [[740, 295], [800, 295], [800, 218]],
+  t7ok: [[885, 190], [925, 190], [925, 65], [955, 65]], g3t8: [[564, 495], [755, 495]], t8t7: [[840, 467], [840, 218]],
+  t8sus: [[885, 495], [912, 495], [912, 270], [955, 270]], t8bad: [[885, 495], [955, 495]], g3bad: [[530, 529], [530, 548], [1040, 548], [1040, 531]],
+  sv1: [[111, 605], [160, 605]], v1v2: [[290, 605], [320, 605]], v2v3: [[450, 605], [610, 605]], v3vis: [[740, 605], [955, 605]],
+};
+function wrapText(t, max = 18) {
+  const out = []; let l = '';
+  t.split(' ').forEach((w) => { if ((l + ' ' + w).trim().length > max) { out.push(l); l = w; } else l = (l + ' ' + w).trim(); });
+  out.push(l); return out;
+}
+const tspans = (t, x, y, max) => { const L = wrapText(t, max); const y0 = y - (L.length - 1) * 8 + 5; return L.map((s, i) => `<tspan x="${x}" y="${y0 + i * 16}">${s}</tspan>`).join(''); };
+const badge = (x, y, c) => (c && c !== 'dim') ? `<circle cx="${x}" cy="${y}" r="9" class="${c === 'crit' ? 'badge-c' : c === 'weak' ? 'badge-w' : 'badge-f'}"/><text class="badge-t" x="${x}" y="${y + 4}">${c === 'crit' ? '!' : c === 'weak' ? '~' : '✓'}</text>` : '';
+function nodos() {
+  const d = st.dec, ev = st.ev, fx = res.adopcion < 0.5 ? 'weak' : 'fix', cob = (a) => (a ? fx : '');
+  const verifica = d.qr || d.suspend || d.db;
+  const oficinaMal = ev.colapsoOficina || (!d.puesto && st.vars.office < 0.6);
+  return [
+    ['t1', d.online ? 'Llena la solicitud en línea' : 'Le pide el cupo al jefe', cob(d.online)],
+    ['t2', d.online ? 'Confirma con un clic' : ev.caidaCorreo ? 'Correo caído: no llega' : 'Envía correo con formato', d.online ? fx : 'crit'],
+    ['t3', d.db ? 'Guarda en base de datos' : 'Registra en Excel', d.db ? fx : 'crit'],
+    ['t4', 'Asigna el cupo', ''],
+    ['t5', ev.caidaCorreo && d.reminders ? 'Aviso no llega: correo caído' : d.reminders ? 'Recibe recordatorio de pago' : 'Nadie le recuerda pagar', ev.caidaCorreo || !d.reminders ? 'crit' : fx],
+    ['t6', d.digital ? 'Elige cómo pagar' : 'Baja al sótano a pagar', d.digital ? fx : 'crit'],
+    ['t7', d.digital || d.db ? 'Pago queda registrado' : 'Cobra en efectivo y anota', cob(d.digital || d.db)],
+    ['k1', d.maquinas ? 'Paga en máquina digital' : 'Sin máquinas de pago', d.maquinas ? fx : 'dim'],
+    ['t8', d.suspend ? 'Cobra o suspende el cupo' : 'Intenta cobrar la deuda', cob(d.suspend)],
+    ['v1', 'Llega y deja el vehículo', ''],
+    ['v2', 'Hace su vuelta, ej. 1 hora', ''],
+    ['v3', d.hourly ? `Paga ${cop(st.vars.tarifaHora)} por hora` : 'Paga $20.000 aunque sea 1 hora', d.hourly ? fx : 'crit'],
+  ].map(([id, t, c]) => {
+    const [x, y] = P[id];
+    return `<g class="nd ${c}"><rect x="${x - TW / 2}" y="${y - TH / 2}" width="${TW}" height="${TH}" rx="7"/><text>${tspans(t, x, y, 18)}</text>${badge(x + TW / 2 - 3, y - TH / 2 + 3, c)}</g>`;
+  }).join('') + [
+    ['g1', '¿Paga este mes?', '', 0, -46],
+    ['g2', ev.colapsoOficina ? '¿La oficina responde?' : '¿Hay alguien en la oficina?', oficinaMal ? 'crit' : d.puesto ? 'fix' : '', -72, -34],
+    ['g3', d.qr ? '¿QR al día?' : '¿Alguien verifica?', verifica ? fx : 'crit', 90, -30],
+  ].map(([id, t, c, dx, dy]) => {
+    const [x, y] = P[id];
+    const L = wrapText(t, 16);
+    return `<g class="nd ${c}"><polygon points="${x},${y - GR} ${x + GR},${y} ${x},${y + GR} ${x - GR},${y}"/><text x="${x}" y="${y + 6}" style="font-size:18px;font-weight:700">?</text><text>${L.map((s, i) => `<tspan x="${x + dx}" y="${y + dy + i * 15}">${s}</tspan>`).join('')}</text>${c ? badge(x + 24, y - 24, c) : ''}</g>`;
+  }).join('');
+}
+function aristas() {
+  const d = st.dec;
+  const off = { t6t7: !d.digital, g2k1: !d.maquinas, k1t7: !d.maquinas, g2g3: d.maquinas, t8sus: !d.suspend };
+  const flecha = (a, b) => {
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = 9, W = 5;
+    const p = (r, o) => `${b[0] - L * r * Math.cos(ang) - o * Math.sin(ang)},${b[1] - L * r * Math.sin(ang) + o * Math.cos(ang)}`;
+    return `<polygon class="arrow" points="${b[0]},${b[1]} ${p(1, W)} ${p(1, -W)}"/>`;
+  };
+  return Object.entries(E).map(([id, pts]) => {
+    const n = pts.length;
+    return `<g class="${off[id] ? 'e-off' : ''}"><polyline class="edge" points="${pts.map((q) => q.join(',')).join(' ')}"/>${flecha(pts[n - 2], pts[n - 1])}</g>`;
+  }).join('');
+}
+function etiquetas() {
+  const d = st.dec, T = (x, y, t, on = true) => `<text class="el" x="${x}" y="${y}" ${on ? '' : 'opacity=".2"'}>${t}</text>`;
+  return T(572, 56, 'Sí') + T(538, 116, 'No') + T(748, 57, 'Digital', d.digital) + T(720, 182, 'Sí') + T(600, 208, 'No', !d.maquinas) + T(683, 251, 'No', d.maquinas) + T(588, 515, 'Sí') + T(538, 545, 'No') + T(848, 360, 'Paga') + T(892, 514, 'No paga');
+}
+function pintarFlujo() {
+  const lanes = LANES.map(([t, y, h], i) => `<rect class="${i % 2 ? 'lane-b' : 'lane-a'}" x="0" y="${y}" width="930" height="${h}"/><rect class="lane-h" x="0" y="${y}" width="38" height="${h - 1}"/><text class="lane-t" transform="translate(24 ${y + h / 2}) rotate(-90)" text-anchor="middle" style="font-size:${t.length > 11 && h < 100 ? 13 : 15}px">${t}</text>`).join('');
+  const fin = (id, y, cls, t, sub) => `<g class="end ${cls}${id === 'sus' && !st.dec.suspend ? ' nd dim' : ''}"><rect x="955" y="${y - 36}" width="175" height="72" rx="8"/><text class="lab" x="968" y="${y - 3}">${t}</text><text class="lab" id="sub-${id}" x="968" y="${y + 15}" style="font-weight:500;font-size:12px;fill:var(--muted)">${sub}</text><text class="cnt" id="cnt-${id}" x="1120" y="${y + 12}">0</text></g>`;
+  $('#flow').innerHTML = `${lanes}<rect class="res-band" x="930" y="0" width="210" height="650"/><text class="res-t" x="1040" y="20" text-anchor="middle">Resultado del mes</text>`
+    + `<g class="nd"><circle class="b" cx="95" cy="65" r="16"/><text x="95" y="103">Inicio</text></g><g class="nd"><circle class="b" cx="95" cy="605" r="16"/><text x="95" y="641">Visita</text></g>`
+    + aristas() + etiquetas() + nodos()
+    + fin('ok', 65, 'ok', 'Al día', 'personas') + fin('sus', 270, 'sus', 'Suspendidas', 'cupo en pausa') + fin('bad', 495, 'bad', 'Sin pagar', 'siguen usándolo') + fin('vis', 605, 'vis', 'Visitantes', 'al mes')
+    + '<g id="tokens"></g>';
+}
+function enteros(p, n) {
+  const v = [p.alDia, p.debe12 + p.debe3, p.susp].map((x) => x * n), piso = v.map(Math.floor);
+  let falta = n - piso.reduce((a, b) => a + b, 0);
+  v.map((x, i) => [x - piso[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (falta > 0) { piso[i]++; falta--; } });
+  return piso;
+}
+function contadores(c) { ['ok', 'bad', 'sus', 'vis'].forEach((k, i) => { const e = $('#cnt-' + k); if (e && c[i] !== undefined) e.textContent = Number(c[i]).toLocaleString('es-CO'); }); }
+function pintarMes() {
+  const s = res.serie[st.mes - 1], c = enteros(s, st.vars.n);
+  contadores([...c, Math.round(s.visitantes)]);
+  const sub = $('#sub-vis'); if (sub) sub.textContent = 'de más: ' + cop(s.sobrecobro);
+  $('#month').value = st.mes; $('#monthOut').textContent = 'Mes ' + st.mes;
+  dibujarCurva();
+}
+function recorrido(ids) {
+  const pts = [];
+  ids.forEach((id) => E[id].forEach((q) => pts.push(q)));
+  const seg = []; let tot = 0;
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); tot += l; }
+  return { pts, seg, tot };
+}
+function punto(r, f) {
+  let d = f * r.tot;
+  for (let i = 0; i < r.seg.length; i++) {
+    if (d <= r.seg[i] || i === r.seg.length - 1) { const u = r.seg[i] ? Math.min(1, d / r.seg[i]) : 0; return [r.pts[i][0] + (r.pts[i + 1][0] - r.pts[i][0]) * u, r.pts[i][1] + (r.pts[i + 1][1] - r.pts[i][1]) * u]; }
+    d -= r.seg[i];
+  }
+  return r.pts[r.pts.length - 1];
+}
+function fichasMes(m) {
+  const p = res.serie[m - 1], f = p.flujo, n = st.vars.n, c = enteros(p, n), esc = Math.min(1, 36 / n), out = [];
+  const digital = ['t5g1', 'g1t6', 't6t7', 't7ok'], oficina = ['t5g1', 'g1t6', 't6g2', 'g2t7', 't7ok'];
+  const maquina = ['t5g1', 'g1t6', 't6g2', 'g2k1', 'k1t7', 't7ok'], cobrada = ['t5g1', 'g1g3', 'g3t8', 't8t7', 't7ok'];
+  const qOk = Math.round(c[0] * esc), qBad = Math.round(c[1] * esc), qSus = Math.round(c[2] * esc);
+  const fCob = f.directo + f.cobrado > 0 ? f.cobrado / (f.directo + f.cobrado) : 0;
+  const A = Math.round(qOk * fCob), D = Math.round((qOk - A) * f.canalDigital), K = Math.round((qOk - A) * f.canalMaquina);
+  for (let i = 0; i < qOk; i++) out.push({ r: i < A ? cobrada : i < A + D ? digital : i < A + D + K ? maquina : oficina, end: 0 });
+  const fVisto = f.noVisto + f.vistoSigue > 0 ? f.vistoSigue / (f.noVisto + f.vistoSigue) : 0;
+  const B = Math.round(qBad * fVisto), C = st.dec.maquinas ? 0 : Math.round((qBad - B) * f.oficina);
+  for (let i = 0; i < qBad; i++) out.push({ r: i < B ? ['t5g1', 'g1g3', 'g3t8', 't8bad'] : i < B + C ? ['t5g1', 'g1t6', 't6g2', 'g2g3', 'g3bad'] : ['t5g1', 'g1g3', 'g3bad'], end: 1 });
+  for (let i = 0; i < qSus; i++) out.push({ r: ['t5g1', 'g1g3', 'g3t8', 't8sus'], end: 2 });
+  const qVis = Math.min(10, Math.round(p.visitantes)), escVis = p.visitantes ? qVis / p.visitantes : 1;
+  for (let i = 0; i < qVis; i++) out.push({ r: ['sv1', 'v1v2', 'v2v3', 'v3vis'], end: 3 });
+  for (let i = out.length - 1; i > 0; i--) { const j = (i * 7919 + m * 31) % (i + 1); [out[i], out[j]] = [out[j], out[i]]; }
+  return { fichas: out, c: [...c, Math.round(p.visitantes)], escs: [esc, esc, esc, escVis] };
+}
+function correrMes() {
+  const lento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  pintarMes();
+  if (lento) { st.wait = setTimeout(sigue, 700); return; }
+  const { fichas, c, escs } = fichasMes(st.mes), g = $('#tokens'), DUR = 1050, GAP = 680 / Math.max(1, fichas.length);
+  contadores([0, 0, 0, 0]);
+  const vivos = [0, 0, 0, 0];
+  g.innerHTML = fichas.map(() => '<circle class="tok" r="5.5" cx="-20" cy="-20"/>').join('');
+  const els = [...g.children], rutas = fichas.map((x) => recorrido(x.r)), hechos = new Array(fichas.length).fill(false), t0 = performance.now();
+  const tick = (now) => {
+    if (!st.playing) return;
+    let quedan = 0;
+    fichas.forEach((x, i) => {
+      if (hechos[i]) return;
+      const f = (now - t0 - i * GAP) / DUR;
+      if (f < 0) { quedan++; return; }
+      if (f >= 1) { hechos[i] = true; els[i].setAttribute('cx', -20); vivos[x.end]++; contadores(vivos.map((v, k) => Math.min(c[k], Math.round(v / (escs[k] || 1))))); return; }
+      quedan++;
+      const [px, py] = punto(rutas[i], f);
+      els[i].setAttribute('cx', px); els[i].setAttribute('cy', py);
+    });
+    if (quedan) st.raf = requestAnimationFrame(tick);
+    else { g.innerHTML = ''; contadores(c); st.wait = setTimeout(sigue, 260); }
+  };
+  st.raf = requestAnimationFrame(tick);
+}
+function sigue() { if (!st.playing) return; if (st.mes >= 12) { parar(); return; } st.mes++; correrMes(); }
+function parar() {
+  st.playing = false; cancelAnimationFrame(st.raf); clearTimeout(st.wait);
+  const g = $('#tokens'); if (g) g.innerHTML = '';
+  $('#play').textContent = '▶ Simular';
+}
+$('#play').addEventListener('click', () => {
+  if (st.playing) { parar(); pintarMes(); return; }
+  if (st.mes >= 12) st.mes = 1;
+  st.playing = true; $('#play').textContent = '❚❚ Pausar'; correrMes();
+});
+$('#month').addEventListener('input', (e) => { parar(); st.mes = +e.target.value; pintarMes(); });
+
+/* ---------- Controles ---------- */
+$('#presets').innerHTML = '<span>Escenario:</span>' + ESCENARIOS.map(([t], i) => `<button data-i="${i}">${t}</button>`).join('');
+$('#decs').innerHTML = DECISIONES.map((d) => `<button class="dec" data-d="${d}" aria-pressed="false">${DEC_T[d]}</button>`).join('');
+$('#evs').innerHTML = Object.keys(EV_T).map((k) => `<button class="dec ev" data-e="${k}" aria-pressed="false">${EV_T[k]}</button>`).join('');
+const slider = (k) => { const [t, a, b, s] = VARS[k]; return `<div class="sl"><label for="var-${k}"><span>${t}</span><output id="out-${k}"></output></label><input id="var-${k}" data-k="${k}" type="range" min="${a}" max="${b}" step="${s}"></div>`; };
+$('#sliders').innerHTML = Object.keys(VARS).map(slider).join('');
+$('#presets').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const [, dec, office] = ESCENARIOS[+b.dataset.i];
+  DECISIONES.forEach((d) => { st.dec[d] = !!dec[d]; });
+  st.vars.office = office; st.mes = 12; parar(); pintar();
+});
+$('#decs').addEventListener('click', (e) => { const b = e.target.closest('.dec'); if (!b) return; st.dec[b.dataset.d] = !st.dec[b.dataset.d]; st.mes = 12; parar(); pintar(); });
+$('#evs').addEventListener('click', (e) => { const b = e.target.closest('.dec'); if (!b) return; st.ev[b.dataset.e] = !st.ev[b.dataset.e]; st.mes = 12; parar(); pintar(); });
+document.addEventListener('input', (e) => {
+  const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+  st.vars[k] = +e.target.value;
+  if (k === 'pBici' && st.vars.pBici + st.vars.pMoto > 1) st.vars.pMoto = Math.max(0, Math.round((1 - st.vars.pBici) * 100) / 100);
+  if (k === 'pMoto' && st.vars.pBici + st.vars.pMoto > 1) st.vars.pBici = Math.max(0, Math.round((1 - st.vars.pMoto) * 100) / 100);
+  parar(); pintar();
+});
+
+function errorPrincipal() {
+  const d = st.dec, ev = st.ev, v = st.vars, tec = d.digital || d.maquinas || d.reminders || d.suspend || d.qr || d.online || d.hourly || d.db;
+  if (tec && !d.training) return `Tecnología sin capacitar: el uso cae a ${pct(res.adopcion, 0)} en el mes 12.`;
+  if (ev.colapsoOficina && !d.maquinas && !d.digital) return 'La oficina colapsa en los meses 6 y 7 y no hay otro canal para pagar.';
+  if (ev.caidaCorreo && !d.online) return 'Se cae el correo en los meses 6 y 7: no entran solicitudes de cupo.';
+  if (!d.digital && !d.maquinas && res.demandaOficina > res.cupoOficina) return `La oficina no da abasto: llegan ${num(res.demandaOficina, 0)} pagos y atiende ${num(res.cupoOficina, 0)} al mes.`;
+  if (!d.qr && !d.suspend && !d.db) return `Nadie verifica: ${num(res.sinPagar, 0)} personas terminan usando sin pagar.`;
+  if ((d.qr || d.suspend) && !d.db) return 'Se verifica con información desactualizada: falta la base de datos.';
+  if (!d.digital && !d.maquinas && res.atencion < 0.6) return `Solo efectivo con la oficina atendida ${pct(res.atencion, 0)} del tiempo.`;
+  if (!d.hourly && v.visitantes > 0) return `Un visitante de 1 hora paga $20.000: sobrecobro de ${cop(res.serie[11].sobrecobro)} al mes.`;
+  return '';
+}
+function pintar() {
+  const v = st.vars;
+  res = simular({ ...v, ...st.dec, ...st.ev });
+  hoy = simular({ ...v, ...st.ev, office: 0.25 });
+  document.querySelectorAll('.dec[data-d]').forEach((b) => b.setAttribute('aria-pressed', st.dec[b.dataset.d]));
+  document.querySelectorAll('.dec[data-e]').forEach((b) => b.setAttribute('aria-pressed', st.ev[b.dataset.e]));
+  Object.entries(VARS).forEach(([k, a]) => { $('#var-' + k).value = v[k]; $('#out-' + k).textContent = a[4](v[k]); });
+  const of = $('#var-office'); of.disabled = !!st.dec.puesto;
+  if (st.dec.puesto) { of.value = res.atencion; $('#out-office').textContent = pctF(res.atencion); }
+  document.querySelectorAll('#presets button').forEach((b) => {
+    const [, dec, office] = ESCENARIOS[+b.dataset.i];
+    b.classList.toggle('on', office === v.office && DECISIONES.every((d) => st.dec[d] === !!dec[d]));
+  });
+  pintarFlujo();
+  $('#mix').textContent = `Autos ${pct(Math.max(0, 1 - v.pBici - v.pMoto), 0)} · Mensualidad: bicicleta $35.000, moto $120.000, auto $150.000 · Promedio ${cop(res.cfg.fee)}`;
+  const err = errorPrincipal();
+  $('#alert').className = 'panel alert' + (err ? '' : ' okay');
+  $('#alert').innerHTML = err ? `<b>! Error principal</b><span>${err}</span>` : '<b>✓ Sin errores graves</b><span>Apaga una decisión para ver qué se daña.</span>';
+  const esHoy = DECISIONES.every((d) => !st.dec[d]) && v.office === 0.25;
+  const fila = (etq, val, x, txt, masEsMejor) => {
+    const mejor = masEsMejor ? x > 1e-9 : x < -1e-9, peor = masEsMejor ? x < -1e-9 : x > 1e-9;
+    const nota = esHoy ? 'Punto de partida' : (mejor ? '✓ ' : peor ? '✕ ' : '') + txt + ' vs hoy';
+    return `<div class="kpi"><span>${etq}</span><b>${val}</b><em class="${!esHoy && mejor ? 'up' : !esHoy && peor ? 'down' : ''}">${nota}</em></div>`;
+  };
+  const dR = res.recaudoPct - hoy.recaudoPct, dC = res.carteraCOP - hoy.carteraCOP, dS = res.sobrecobroCOP - hoy.sobrecobroCOP, dN = res.netoCOP - hoy.netoCOP, dD = res.diasCupo - hoy.diasCupo, dM = res.minPago - hoy.minPago;
+  $('#kpis').innerHTML = fila('Recaudo de mensualidades', pct(res.recaudoPct), dR, sg(dR * 100, (x) => num(x) + ' pts'), true)
+    + fila('Deuda acumulada', mill(res.carteraCOP), dC, sg(dC, mill), false)
+    + fila('Balance tras costos', mill(res.netoCOP), dN, sg(dN, mill), true)
+    + fila('Sobrecobro a visitantes', mill(res.sobrecobroCOP), dS, sg(dS, mill), false)
+    + fila('Días para un cupo', num(res.diasCupo), dD, sg(dD, (x) => num(x)), false)
+    + fila('Minutos por pago', num(res.minPago, 0), dM, sg(dM, (x) => num(x, 0)), false);
+  const key = JSON.stringify([v, st.ev]);
+  if (st.apKey !== key) { st.ap = aportes({ ...v, ...st.ev }); st.apKey = key; }
+  const rank = DECISIONES.map((d) => [d, st.ap[d]]).sort((a, b) => b[1] - a[1]), max = Math.max(...rank.map((r) => r[1]), 0.001);
+  $('#bars').innerHTML = rank.map(([d, x]) => `<div class="bar" title="${DEC_T[d]}: ${sg(x, mill)} al balance del año"><span>${DEC_T[d]}</span><div class="bar-track"><i style="width:${Math.max(0, x / max * 100)}%"></i></div><b>${sg(x, mill)}</b></div>`).join('');
+  $('#chartTable').innerHTML = `<table><thead><tr><th>Mes</th><th>Hoy</th><th>Tu plan</th></tr></thead><tbody>${res.serie.map((r, i) => `<tr><td>${r.mes}</td><td>${mill(hoy.serie[i].cartera)}</td><td>${mill(r.cartera)}</td></tr>`).join('')}</tbody></table>`;
+  pintarMes();
+}
+
+/* ---------- Gráfica ---------- */
+function techo(v) {
+  if (v <= 0) return 1e6;
+  const e = Math.pow(10, Math.floor(Math.log10(v / 4)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * e * 4 >= v) return m * e * 4;
+  return 40 * e;
+}
+function dibujarCurva() {
+  const box = $('#chart'), W = Math.max(280, box.clientWidth), H = 230, M = { t: 12, r: 64, b: 26, l: 58 };
+  const iguales = res.serie.every((r, i) => Math.abs(r.cartera - hoy.serie[i].cartera) < 1);
+  const series = [{ n: 'Hoy', c: 'var(--s-hoy)', v: hoy.serie.map((r) => r.cartera) }];
+  if (!iguales) series.push({ n: 'Tu plan', c: 'var(--s-plan)', v: res.serie.map((r) => r.cartera) });
+  $('#chartLegend').innerHTML = series.map((s) => `<span><span class="key line" style="background:${s.c}"></span>${s.n}</span>`).join('');
+  const tope = techo(Math.max(...series.flatMap((s) => s.v)));
+  const X = (i) => M.l + i / 11 * (W - M.l - M.r), Y = (v) => H - M.b - v / tope * (H - M.t - M.b);
+  let g = '';
+  if (st.ev.caidaCorreo || st.ev.colapsoOficina) g += `<rect x="${X(5)}" y="${M.t}" width="${X(6) - X(5)}" height="${H - M.t - M.b}" fill="var(--crit-soft)"/><text x="${(X(5) + X(6)) / 2}" y="${M.t + 13}" text-anchor="middle">Falla</text>`;
+  for (let t = 0; t <= 4; t++) { const val = tope * t / 4, y = Y(val); g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${M.l - 8}" y="${y + 4}" text-anchor="end">${mill(val).replace(',0 M', ' M')}</text>`; }
+  for (let i = 0; i < 12; i++) if (W > 460 || i % 2 === 1) g += `<text x="${X(i)}" y="${H - 7}" text-anchor="middle">${i + 1}</text>`;
+  g += `<line x1="${X(st.mes - 1)}" x2="${X(st.mes - 1)}" y1="${M.t}" y2="${H - M.b}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  series.forEach((s) => { g += `<polyline fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${s.v.map((v, i) => X(i) + ',' + Y(v)).join(' ')}"/>`; });
+  const fin = series.map((s) => ({ s, y: Y(s.v[11]) })).sort((a, b) => a.y - b.y);
+  if (fin.length === 2 && fin[1].y - fin[0].y < 30) fin[1].y = fin[0].y + 30;
+  fin.forEach(({ s, y }) => { g += `<circle cx="${X(11)}" cy="${Y(s.v[11])}" r="4" fill="${s.c}" stroke="var(--surface)" stroke-width="2"/><text x="${X(11) + 8}" y="${Math.min(y, H - 40)}" style="font-weight:600;fill:var(--ink)">${s.n}</text><text x="${X(11) + 8}" y="${Math.min(y, H - 40) + 14}">${mill(s.v[11])}</text>`; });
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Deuda acumulada por mes, hoy frente a tu plan">${g}<g id="cross"></g><rect x="${M.l}" y="${M.t}" width="${W - M.l - M.r}" height="${H - M.t - M.b}" fill="transparent" id="hit"/></svg><div class="tip" id="tip" hidden></div>`;
+  const hit = box.querySelector('#hit'), cross = box.querySelector('#cross'), tip = box.querySelector('#tip');
+  const mover = (e) => {
+    const r = box.getBoundingClientRect(), px = (e.clientX - r.left) * (W / r.width), i = Math.max(0, Math.min(11, Math.round((px - M.l) / (W - M.l - M.r) * 11)));
+    cross.innerHTML = `<line x1="${X(i)}" x2="${X(i)}" y1="${M.t}" y2="${H - M.b}" stroke="var(--ink)"/>` + series.map((s) => `<circle cx="${X(i)}" cy="${Y(s.v[i])}" r="5" fill="${s.c}" stroke="var(--surface)" stroke-width="2"/>`).join('');
+    tip.hidden = false; tip.innerHTML = `<strong>Mes ${i + 1}</strong><br>` + series.map((s) => `${s.n}: ${mill(s.v[i])}`).join('<br>');
+    const tx = X(i) * (r.width / W), tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(r.width - tw, tx + (tx > r.width / 2 ? -tw - 10 : 10))) + 'px'; tip.style.top = '6px';
+  };
+  hit.addEventListener('pointermove', mover); hit.addEventListener('pointerdown', mover);
+  hit.addEventListener('pointerleave', () => { cross.innerHTML = ''; tip.hidden = true; });
+}
+let anchoPrevio = innerWidth;
+addEventListener('resize', () => { if (Math.abs(innerWidth - anchoPrevio) > 1) { anchoPrevio = innerWidth; dibujarCurva(); } });
+pintar();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => dibujarCurva());
+</script>
+
+</body>
+</html>
